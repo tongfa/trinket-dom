@@ -4,8 +4,15 @@
   "description": "barebones ui framework for browsers with intention of maximizing usage of native APIs instead of wrapping them",
   "main": "test.html",
   "scripts": {
+    "build": "esbuild",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "esbuild": "^0.17.14"
+  },
+  "devDependencies": {
+    "eslint": "^8.37.0"
+  }
 }
