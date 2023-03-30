@@ -4,15 +4,16 @@
   "description": "barebones ui framework for browsers with intention of maximizing usage of native APIs instead of wrapping them",
   "main": "test.html",
   "scripts": {
-    "build": "esbuild",
+    "build": "esbuild src/framework.js --bundle --outfile=dist/trinket-dom.js",
+    "build:prod": "esbuild src/framework.js --bundle --minify --outfile=dist/trinket-dom.min.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
+  "author": "Chris David",
   "license": "MIT",
   "dependencies": {
-    "esbuild": "^0.17.14"
   },
   "devDependencies": {
+    "esbuild": "^0.17.14",
     "eslint": "^8.37.0"
   }
 }
