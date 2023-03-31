@@ -233,18 +233,22 @@
     })
 </script>
 <template id="test-status">
-    <div>
-        <span $if="testStatus === 'success'">all tests passed</span>
-        <span $else-if="testStatus === 'failure'">tests failed</span>
+    <div $ref="test-status">
+        <span $if="status === 'success'">all tests passed</span>
+        <span $else-if="status === 'failure'">tests failed</span>
         <span $else>running</span>
     </div>
 </template>
 
 <div>
-    <test-status $attr:status="testStatus"></test-status>
+    <test-status $attr:status="status"></test-status>
 </div>
 
 <script>
+    const state = {
+        status: "running"
+    };
+
     const start = async () => {
         let newStatus = 'success'
         const data = {
@@ -254,9 +258,13 @@
         // $mount(tests[6], data)
         // return
 
-        for (test of tests) {
+        // mount our status component to give viewer warm fuzzies
+        const testStatusComponent = document.getElementsByTagName('test-status')[0];
+        const testStatus = $mount(testStatusComponent, state)
+
+        for (let test of tests) {
             const component = test.children[1]
-            const { verify, name } = $mount(component, data)
+            const { verify, name } = $testHarness($mount(component, data));
             const { errorCount } = await verify()
             if (errorCount === 0) {
                 test.classList.add('hide')
@@ -264,12 +272,10 @@
                 newStatus = 'failure'
             }
         }
-        testStatus = newStatus
-        console.log('status', testStatus)
-        const testStatusComponent = document.getElementsByTagName('test-status')[0];
-        $mount(testStatusComponent, {testStatus})
+        testStatus.instance.data.status = newStatus;
+        testStatus.refresh();
     }
-    let testStatus = 'running'
+
     start();
 </script>
 

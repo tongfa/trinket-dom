@@ -1,4 +1,4 @@
-const { $component, $attributeDirective, $mount } = (function() {
+const { $component, $attributeDirective, $mount, $testHarness } = (function() {
     /* finds index of two consecutive characters in string, i.e. `{{` */
     const indexOf2 = (haystack, needle, pos = 0) => {
         while (true) {
@@ -141,13 +141,6 @@ const { $component, $attributeDirective, $mount } = (function() {
         return {keys, values};
     };
 
-    const evaluateFunction = (instance, expression, extraContext = {}) => {
-        const { keys, values } = prepareEvaluate(instance, extraContext);
-        debugger;
-        const f = Function(...keys, `${expression}`);
-        return f(...values);
-    };
-
     const evaluate = (instance, expression, extraContext = {}) => {
         const { keys, values } = prepareEvaluate(instance, extraContext);
         const f = Function(...keys, `"use strict"; return ${expression}`);
@@ -283,10 +276,10 @@ const { $component, $attributeDirective, $mount } = (function() {
         for (child of childElements) {
             element.appendChild(child);
         }
-        return { instance, element };
+        return { instance, element, templateNode };
     };
 
-    const testHarness = (instance, element) => {
+    const testHarness = (element) => {
         const $flush = flush;
         const $findElementsByAttr = findElementsByAttr;
         const $instanceRoot = element;
@@ -314,7 +307,7 @@ const { $component, $attributeDirective, $mount } = (function() {
                 try {
                     await __test.test();
                 } catch (e) {
-                    console.warn('test failure:', test.description, e);
+                    console.warn('test failure:', __test.description, e);
                     errors.push(e);
                 }
             }
@@ -337,15 +330,36 @@ const { $component, $attributeDirective, $mount } = (function() {
         }
         const preliminaryInstance = {data: parentData};
         processRegularDirectives(preliminaryInstance, attributeAppEntryDirectives, [element], element, []);  // potentially adds stuff to preliminaryInstance.data
-        const { instance } = mount(preliminaryInstance, element);
+        const { instance, templateNode } = mount(preliminaryInstance, element);
 
-        return testHarness(instance, element);
+        const refresh = () => {
+            scheduleRefresh({callback: () => {
+                /* empty node of children */
+                while (element.lastChild) {
+                    element.removeChild(element.lastChild);
+                }
+
+                /* put new children back in */
+                const childElements = processTemplateElement(instance, templateNode);
+                for (child of childElements) {
+                    element.appendChild(child);
+                }
+
+            }});
+        };
+
+        return { instance, element, refresh };
+    };
+
+    const $testHarness = ({element}) => {
+        return testHarness(element);
     };
 
     return {
         $component,
         $attributeDirective,
         $mount,
+        $testHarness,
     };
 })();
 
