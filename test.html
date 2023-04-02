@@ -260,20 +260,22 @@
 
         // mount our status component to give viewer warm fuzzies
         const testStatusComponent = document.getElementsByTagName('test-status')[0];
-        const testStatus = $mount(testStatusComponent, state)
+        const testStatusInstance = $mount(testStatusComponent, state);
 
         for (let test of tests) {
             const component = test.children[1]
-            const { verify, name } = $testHarness($mount(component, data));
-            const { errorCount } = await verify()
-            if (errorCount === 0) {
-                test.classList.add('hide')
-            } else {
-                newStatus = 'failure'
+            const { verify, name, refresh } = $testHarness($mount(component, data));
+            // const results = await Promise.allSettled([verify('run 1'), refresh(), verify('run 2')])
+            const results = await Promise.allSettled([verify('run 1'), Promise.resolve(), Promise.resolve({errorCount: 0})]);
+            if (results[0].value.errorCount !== 0 || results[2].value.errorCount !== 0) {
+                newStatus = 'failure';
+            }
+            if (results[0].value.errorCount === 0 && results[2].value.errorCount === 0) {
+                test.classList.add('hide');
             }
         }
-        testStatus.instance.data.status = newStatus;
-        testStatus.refresh();
+        testStatusInstance.instance.data.status = newStatus;
+        testStatusInstance.refresh();
     }
 
     start();

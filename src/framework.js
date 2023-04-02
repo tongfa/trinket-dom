@@ -279,7 +279,7 @@ const { $component, $attributeDirective, $mount, $testHarness } = (function() {
         return { instance, element, templateNode };
     };
 
-    const testHarness = (element) => {
+    const testHarness = (element, refresh) => {
         const $flush = flush;
         const $findElementsByAttr = findElementsByAttr;
         const $instanceRoot = element;
@@ -289,6 +289,7 @@ const { $component, $attributeDirective, $mount, $testHarness } = (function() {
         const $it = async (description, test) => {
             tests.push({description, test});
         };
+        const $$it = (prefix) => (description, test) => $it(`${prefix}:${description}`, test);
         const $expect = (value) => {
             const check = (test, message) => {
                 if (! test) {
@@ -315,12 +316,12 @@ const { $component, $attributeDirective, $mount, $testHarness } = (function() {
             return { errorCount };
         };
         verify = component.verify ?
-            (async () => {
-                component.verify($it, $expect, $findElementsByAttr, $instanceRoot, $flush);
+            ((prefix) => {
+                component.verify($$it(prefix), $expect, $findElementsByAttr, $instanceRoot, $flush);
                 return $_run();
             }) : () => Promise.resolve({ errorCount: 0});
 
-        return { name, verify };
+        return { name, verify, refresh };
     };
 
     /* mounts an app */
@@ -351,8 +352,8 @@ const { $component, $attributeDirective, $mount, $testHarness } = (function() {
         return { instance, element, refresh };
     };
 
-    const $testHarness = ({element}) => {
-        return testHarness(element);
+    const $testHarness = ({element, refresh}) => {
+        return testHarness(element, refresh);
     };
 
     return {
