@@ -136,64 +136,177 @@
         </script>
     </div>
 
-    <div class="test">
+    <div class="data-test">
         <h2>data test</h2>
-        <data-test $data="{colorBlue: 'blue'}"></data-test>
+        <data-test $ref="componentElement"></data-test>
+        <script class="data-test">
+            /* note template expects colorBlue to be defined in component tag */
+            $component({
+                name: 'data-test',
+                data: {
+                    colorGreen: 'green'
+                }
+            })
+        </script>
+        <template id="data-test">
+            <div>
+                green is {{ colorGreen }}
+            </div>
+        </template>
+        <script>
+            $testInjector(({$describe, $it, $expect, $beforeAll, $afterAll}) => {
+                $describe('data', () => {
+                    let topElement;
+                    let element;
+                    let instance;
+                    $beforeAll(() => {
+                        topElement = document.getElementsByClassName('data-test')[0];
+                        element = $findElementsByAttr(topElement, '$ref', 'componentElement')[0];
+                        instance = $mount(element);
+                    })
+                    $afterAll(({errorCount}) => {
+                        if (errorCount === 0) {
+                            topElement.classList.add('hide');
+                        }
+                    })
+                    $it('from component should populate within string', () => {
+                        const entireStringElement = element.children[0];
+                        $expect(entireStringElement.textContent.trim()).toEqual('green is green');
+                    })
+                })
+            })
+        </script>
     </div>
-    <div class="test">
+
+    <div class="if-test">
         <h2>$if</h2>
         <if-test></if-test>
+        <script class="$if-test">
+            $component({
+                name: 'if-test',
+                templateId: '$if-test'
+            })
+        </script>
+        <template id="$if-test">
+            <div>
+                <span $if="true">see this</span>
+                <span $if="false">do not see this</span>
+                <span $else>and I should see this</span>
+            </div>
+        </template>
+        <script>
+            $testInjector(({$describe, $it, $expect, $beforeAll, $afterAll}) => {
+                $describe('if', () => {
+                    let topElement;
+                    let element;
+                    let instance;
+                    $beforeAll(() => {
+                        topElement = document.getElementsByClassName('if-test')[0];
+                        element = topElement.getElementsByTagName('if-test')[0];
+                        instance = $mount(element);
+                    })
+                    $afterAll(({errorCount}) => {
+                        if (errorCount === 0) {
+                            topElement.classList.add('hide');
+                        }
+                    })
+                    $it('shows the right things', () => {
+                        const snippets = [];
+                        for (const child of element.children[0].children) {
+                            const text = child.textContent.trim();
+                            if (text) {
+                                snippets.push(text);
+                            }
+                        }
+                        const finalString = snippets.join(' ');
+                        $expect(finalString).toEqual('see this and I should see this');
+                    })
+                })
+            })
+        </script>
     </div>
-    <div class="test">
+
+    <div class="if-else-test">
         <h2>$if $else-if $else</h2>
         <if-else-if-else-test></if-else-if-else-test>
+        <script class="$if-$else-if-$else-test">
+            $component({
+                name: 'if-else-if-else-test',
+                templateId: '$if-$else-if-$else-test'
+            })
+        </script>
+        <template id="$if-$else-if-$else-test">
+            <div>
+                <span $if="true">see this</span>
+                <span $else-if="true">do not see this</span>
+                <span $else>do not see this</span>
+            </div>
+            <div>
+                <span $if="false">do not see this</span>
+                <span $else-if="true">see this</span>
+                <span $else>do not see this</span>
+            </div>
+            <div>
+                <span $if="false">see this</span>
+                <span $else-if="false">do not see this</span>
+                <span $else>see this</span>
+            </div>
+        </template>
+        <script>
+            $testInjector(({$describe, $it, $expect, $beforeAll, $afterAll}) => {
+                $describe('if-else', () => {
+                    let topElement;
+                    let element;
+                    let instance;
+                    $beforeAll(() => {
+                        topElement = document.getElementsByClassName('if-else-test')[0];
+                        element = topElement.getElementsByTagName('if-else-if-else-test')[0];
+                        instance = $mount(element);
+                    })
+                    $afterAll(({errorCount}) => {
+                        if (errorCount === 0) {
+                            topElement.classList.add('hide');
+                        }
+                    })
+                    const getTextContextOnList = (elementList) => {
+                        const snippets = [];
+                        for (const child of elementList) {
+                            const text = child.textContent.trim();
+                            if (text) {
+                                snippets.push(text);
+                            }
+                        }
+                        const finalString = snippets.join(' ');
+                        return finalString;
+                    }
+                    $it('true if clause takes precedent', () => {
+                        $expect(getTextContextOnList(element.children[0].children)).toEqual('see this');
+                    })
+                    $it('false if true else if clause takes precedent', () => {
+                        $expect(getTextContextOnList(element.children[1].children)).toEqual('see this');
+                    })
+                    $it('else preceded by false clauses takes precedent', () => {
+                        $expect(getTextContextOnList(element.children[2].children)).toEqual('see this');
+                    })
+                })
+            })
+        </script>
     </div>
-    <div class="test">
+
+    <div class="for-test">
         <h2>$for</h2>
         <for-test></for-test>
     </div>
-    <div class="test">
+    <div class="click-test">
         <h2>click</h2>
         <event-test></event-test>
     </div>
-    <div class="test">
+    <div class="change-data-test">
         <h2>change data</h2>
         <change-data-test></change-data-test>
     </div>
 </body>
 
-
-<script class="data-test">
-    /* note template expects colorBlue to be defined in component tag */
-    $component({
-        name: 'data-test',
-        data: {
-            colorGreen: 'green'
-        }
-    })
-</script>
-<template id="data-test">
-    <div>
-        green is {{ colorGreen }}
-    </div>
-    <div>
-        blue is {{ colorBlue }}
-    </div>
-</template>
-
-<script class="$if-test">
-    $component({
-        name: 'if-test',
-        templateId: '$if-test'
-    })
-</script>
-<template id="$if-test">
-    <div>
-        <span $if="true">see this</span>
-        <span $if="false">do not see this</span>
-        <span $else>and I should see this</span>
-    </div>
-</template>
 
 <script class="$if-$else-if-$else-test">
     $component({
