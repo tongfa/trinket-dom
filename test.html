@@ -27,6 +27,27 @@
         <div>Tests</div>
     </h1>
 
+    <!-- Test Status Widget -->
+    <script class="test-status">
+        $component({
+            name: 'test-status',
+            props: ['testStatus']
+        })
+    </script>
+    <template id="test-status">
+        <div $ref="test-status">
+            <span $if="status === 'success'">all tests passed</span>
+            <span $else-if="status === 'failure'">tests failed</span>
+            <span $else>running</span>
+        </div>
+    </template>
+
+    <div>
+        <test-status $attr:status="status"></test-status>
+    </div>
+
+    <!-- framework tests -->
+
     <div class="template-test">
         <script>
             $component({
@@ -296,136 +317,152 @@
     <div class="for-test">
         <h2>$for</h2>
         <for-test></for-test>
+        <script>
+            $component({
+                name: 'for-test',
+                templateId: '$for-test',
+            })
+        </script>
+        <template id="$for-test">
+            <div $ref="line" $for="count of [1, 2, 3, 4]">
+                I should see 4 of these, numero {{ count }}
+            </div>
+        </template>
+        <script>
+            $testInjector(({$describe, $it, $expect, $beforeAll, $afterAll, $flush}) => {
+                $describe('$for', () => {
+                    let topElement;
+                    let element;
+                    let instance;
+                    $beforeAll(() => {
+                        topElement = document.getElementsByClassName('for-test')[0];
+                        element = topElement.getElementsByTagName('for-test')[0];
+                        instance = $mount(element);
+                    })
+                    $afterAll(({errorCount}) => {
+                        if (errorCount === 0) {
+                            topElement.classList.add('hide');
+                        }
+                    })
+                    const getTextContextOnList = (elementList) => {
+                        const snippets = [];
+                        for (const child of elementList) {
+                            const text = child.textContent.trim();
+                            if (text) {
+                                snippets.push(text);
+                            }
+                        }
+                        const finalString = snippets.join(' ');
+                        return finalString;
+                    }
+                    $it('it has four lines', async () => {
+                        const lines = $findElementsByAttr(element, '$ref', 'line')
+                        await $flush()
+                        $expect(lines.length).toEqual(4)
+                        $expect(lines[3].textContent.trim()).toEqual('I should see 4 of these, numero 4')
+                    })
+                })
+            })
+        </script>
     </div>
+
     <div class="click-test">
         <h2>click</h2>
         <event-test></event-test>
+        <script>
+            let eventTestFired = false;
+            $component({
+                name: 'event-test',
+                templateId: '$event-test',
+                data: {
+                    fire() { eventTestFired = true; }
+                },
+            })
+        </script>
+        <template id="$event-test">
+            <div>
+                <span $event:click="fire()" $ref="click-increment">click this</span>
+            </div>
+        </template>
+        <script>
+            $testInjector(({$describe, $it, $expect, $beforeAll, $afterAll, $flush}) => {
+                $describe('$event', () => {
+                    let topElement;
+                    let element;
+                    let instance;
+                    $beforeAll(() => {
+                        topElement = document.getElementsByClassName('click-test')[0];
+                        element = topElement.getElementsByTagName('event-test')[0];
+                        instance = $mount(element);
+                    })
+                    $afterAll(({errorCount}) => {
+                        if (errorCount === 0) {
+                            topElement.classList.add('hide');
+                        }
+                    })
+                    $it('has four lines', async () => {
+                        const button = $findElementsByAttr(element, '$ref', 'click-increment')[0]
+                        button.click()
+                        $expect(eventTestFired).toEqual(true);
+                    })
+                })
+            })
+        </script>
     </div>
+
     <div class="change-data-test">
         <h2>change data</h2>
         <change-data-test></change-data-test>
+        <script>
+            $component({
+                name: 'change-data-test',
+                data: {
+                    somethingThatChanges: 1,
+                    increment($refreshByRef) {
+                        this.somethingThatChanges++
+                        $refreshByRef('count')
+                    },
+                },
+            })
+        </script>
+        <template id="change-data-test">
+            <div $ref="count">
+                {{ somethingThatChanges }}
+            </div>
+            <div $ref="click-increment" $event:click="increment($refreshByRef)">
+                click this
+            </div>
+        </template>
+        <script>
+            $testInjector(({$describe, $it, $expect, $beforeAll, $afterAll, $flush}) => {
+                $describe('data mutation', () => {
+                    let topElement;
+                    let element;
+                    let instance;
+                    $beforeAll(() => {
+                        topElement = document.getElementsByClassName('change-data-test')[0];
+                        element = topElement.getElementsByTagName('change-data-test')[0];
+                        instance = $mount(element);
+                    })
+                    $afterAll(({errorCount}) => {
+                        if (errorCount === 0) {
+                            topElement.classList.add('hide');
+                        }
+                    })
+                    $it('increments when clicked', async () => {
+                        const button = $findElementsByAttr(element, '$ref', 'click-increment')[0]
+                        button.click()
+                        button.click()
+                        button.click()
+                        await $flush()
+                        const count = $findElementsByAttr(element, '$ref', 'count')[0]
+                        $expect(count.textContent.trim()).toEqual('4')
+                    })
+                })
+            })
+        </script>
     </div>
 </body>
-
-
-<script class="$if-$else-if-$else-test">
-    $component({
-        name: 'if-else-if-else-test',
-        templateId: '$if-$else-if-$else-test'
-    })
-</script>
-<template id="$if-$else-if-$else-test">
-    <div>
-        <div>
-            <span $if="true">see this</span>
-            <span $else-if="true">do not see this</span>
-            <span $else>do not see this</span>
-        </div>
-        <div>
-            <span $if="false">do not see this</span>
-            <span $else-if="true">see this</span>
-            <span $else>do not see this</span>
-        </div>
-        <div>
-            <span $if="true">see this</span>
-            <span $else-if="false">do not see this</span>
-            <span $else>see this</span>
-        </div>
-    </div>
-</template>
-
-<script>
-    $component({
-        name: 'for-test',
-        templateId: '$for-test',
-        verifyX() {
-            $it('it has four lines', async () => {
-                const lines = $findElementsByAttr($instanceRoot, '$ref', 'line')
-                await $flush()
-                $expect(lines.length).toEqual(4)
-                $expect(lines[3].textContent.trim()).toEqual('I should see 4 of these, numero 4')
-            })
-        }
-    })
-</script>
-<template id="$for-test">
-    <div $ref="line" $for="count of [1, 2, 3, 4]">
-        I should see 4 of these, numero {{ count }}
-    </div>
-</template>
-
-<script>
-    $component({
-        name: 'event-test',
-        templateId: '$event-test',
-        data: {
-            foo() { alert('fired click handler') }
-        },
-    })
-</script>
-<template id="$event-test">
-    <div>
-        <span $event:click="foo()">click this</span>
-    </div>
-</template>
-
-<script>
-    $component({
-        name: 'change-data-test',
-        data: {
-            somethingThatChanges: 1,
-            increment($refreshByRef) {
-                this.somethingThatChanges++
-                $refreshByRef('count')
-            },
-        },
-        /* TODO
-         * test harness should be used here.
-         * and refresh behavior should be here too
-         */
-        unitTest($it, $expect, $findElementsByAttr, $flush, $thisComponent) {
-            const component = $thisComponent;
-            $it('increments when clicked', async () => {
-                const { $elementRoot } = $testHarness($mount({
-                    component,
-                }));
-                const button = $findElementsByAttr($elementRoot, '$ref', 'click-increment')[0]
-                button.click()
-                button.click()
-                button.click()
-                await $flush()
-                const count = $findElementsByAttr($elementRoot, '$ref', 'count')[0]
-                $expect(count.textContent.trim()).toEqual('4')
-            })
-        }
-    })
-</script>
-<template id="change-data-test">
-    <div $ref="count">
-        {{ somethingThatChanges }}
-    </div>
-    <div $ref="click-increment" $event:click="increment($refreshByRef)">
-        click this
-    </div>
-</template>
-
-<script class="test-status">
-    $component({
-        name: 'test-status',
-        props: ['testStatus']
-    })
-</script>
-<template id="test-status">
-    <div $ref="test-status">
-        <span $if="status === 'success'">all tests passed</span>
-        <span $else-if="status === 'failure'">tests failed</span>
-        <span $else>running</span>
-    </div>
-</template>
-
-<div>
-    <test-status $attr:status="status"></test-status>
-</div>
 
 <script>
     const state = {
@@ -440,7 +477,7 @@
         const testStatusInstance = $mount(testStatusComponent, state);
 
         const testRunner = $testRunner();
-        const { errorCount } = testRunner.run();
+        const { errorCount } = await testRunner.run();
         if (errorCount) {
             newStatus = 'failure';
         }
