@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html>
 <head>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -37,7 +38,7 @@
     <template id="test-status">
         <div $ref="test-status">
             <span $if="status === 'success'">all tests passed</span>
-            <span $else-if="status === 'failure'">tests failed</span>
+            <span $else-if="status === 'failure'">tests failed - look at devtools console</span>
             <span $else>running</span>
         </div>
     </template>
