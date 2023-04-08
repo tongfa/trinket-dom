@@ -1,17 +1,17 @@
-## Trinket Dom
+## Trinkit
 
-A bare bones UI framework for browsers intended to expose developer to browser APIs and DOM manipulation
-instead of wrapping.
+A bare bones UI framework intended to expose developer to browser APIs and DOM manipulation more so
+than other UI frameworks.
 
 Goals:
 
 * Make coding fun like it was in 1984!
-* Bias towards beginners learning to code rather than seasoned developers
-* Use of compiler / build system / minification is discouraged
-* With the above, deployed projects should always be editable.
-* Also with the above, the chances of needing to upgrade dependencies becomes lower.
-* Framework syntax is clearly marked by a `$` prefix on everything, providing a clear indication of browser native code vs. framework code.
 * Zero dependencies
-* Explicit naming is preferred over brevity
+* Use of compiler / build system / minification is discouraged
+* editable source is encouraged
+* creating archival quality apps that always work from the source level is possible
+* Framework syntax is consistently marked providing a clear indication of browser native code vs. framework code. (currently uses `$` prefix)
+* framework maintenance is greatly reduced over long run because of lack of dependencies
+* Explicit naming is preferred over syntax brevity
 
-This isn't well optimized yet and therefore is currently useful for smaller projects.
+While this project works, it isn't well optimized yet and therefore is currently useful for smaller projects. I would think other modern frameworks would be more performant.
