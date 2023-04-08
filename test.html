@@ -60,13 +60,13 @@
             </div>
         </template>
         <h2>template test</h2>
-        <template-test $ref="template-test"></template-test>
+        <template-test></template-test>
         <script>
             $testInjector(({$describe, $it, $expect}) => {
                 $describe('template', () => {
                     $it('should display static text', () => {
                         const topElement = document.getElementsByClassName('template-test')[0];
-                        const element = $findElementsByAttr(topElement, '$ref', 'template-test')[0];
+                        const element = topElement.getElementsByTagName('template-test')[0];
                         const instance = $mount(element);
 
                         $expect(element.textContent.trim()).toEqual('Just see this');
@@ -93,13 +93,13 @@
             });
         </script>
         <h2>attribute interpolation</h2>
-        <attribute-test $ref="attribute-test"></attribute-test>
+        <attribute-test></attribute-test>
         <script>
             $testInjector(({$describe, $it, $expect}) => {
                 $describe('attributes', () => {
                     $it('should set class values', () => {
                         const topElement = document.getElementsByClassName('attribute-test')[0];
-                        const element = $findElementsByAttr(topElement, '$ref', 'attribute-test')[0];
+                        const element = topElement.getElementsByTagName('attribute-test')[0];
                         const instance = $mount(element);
 
                         const markedElementList = topElement.getElementsByClassName('marked');
@@ -115,7 +115,7 @@
 
     <div class="text-test">
         <h2>text interpolation</h2>
-        <text-test $ref="componentElement"></text-test>
+        <text-test></text-test>
         <script>
             $component({
                 name: 'text-test',
@@ -136,7 +136,7 @@
                     let instance;
                     $beforeAll(() => {
                         topElement = document.getElementsByClassName('text-test')[0];
-                        element = $findElementsByAttr(topElement, '$ref', 'componentElement')[0];
+                        element = topElement.getElementsByTagName('text-test')[0];
                         instance = $mount(element);
                     })
                     $afterAll(({errorCount}) => {
@@ -159,7 +159,7 @@
 
     <div class="data-test">
         <h2>data test</h2>
-        <data-test $ref="componentElement"></data-test>
+        <data-test></data-test>
         <script class="data-test">
             /* note template expects colorBlue to be defined in component tag */
             $component({
@@ -182,7 +182,7 @@
                     let instance;
                     $beforeAll(() => {
                         topElement = document.getElementsByClassName('data-test')[0];
-                        element = $findElementsByAttr(topElement, '$ref', 'componentElement')[0];
+                        element = topElement.getElementsByTagName('data-test')[0];
                         instance = $mount(element);
                     })
                     $afterAll(({errorCount}) => {
