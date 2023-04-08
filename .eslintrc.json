@@ -4,6 +4,9 @@
         "es2021": true
     },
     "rules": {
-        "semi": ["error", "always"]
+        "semi": ["error", "always"],
+        "no-const-assign": ["error"],
+        "prefer-const": ["error"],
+        "no-unused-vars": ["error"]
     }
 }

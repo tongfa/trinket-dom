@@ -26,18 +26,116 @@
     <h1 class="title">
         <div>Tests</div>
     </h1>
-    <div class="test">
+
+    <div class="template-test">
+        <script>
+            $component({
+                name: 'template-test'
+            })
+        </script>
+        <template id="template-test">
+            <div>
+                Just see this
+            </div>
+        </template>
         <h2>template test</h2>
-        <template-test></template-test>
+        <template-test $ref="template-test"></template-test>
+        <script>
+            $testInjector(({$describe, $it, $expect}) => {
+                $describe('template', () => {
+                    $it('should display static text', () => {
+                        const topElement = document.getElementsByClassName('template-test')[0];
+                        const element = $findElementsByAttr(topElement, '$ref', 'template-test')[0];
+                        const instance = $mount(element);
+
+                        $expect(element.textContent.trim()).toEqual('Just see this');
+                        topElement.classList.add('hide');
+                    });
+                });
+            });
+        </script>
     </div>
-    <div class="test">
+
+    <div class="attribute-test">
+        <!-- /* intentionally template followed by script to test both orders work */ -->
+        <template id="attribute-test">
+            <div>
+                <div $attr:class="'marked'">this should be bolder and red</div>
+                <div>compared to this</div>
+                <div $attr:class="colorRed === 'red' ? 'marked': ''">this should be red too</div>
+            </div>
+        </template>
+        <script>
+            $component({
+                name: 'attribute-test',
+                data: { colorRed: 'red'},
+            });
+        </script>
         <h2>attribute interpolation</h2>
-        <attribute-test></attribute-test>
+        <attribute-test $ref="attribute-test"></attribute-test>
+        <script>
+            $testInjector(({$describe, $it, $expect}) => {
+                $describe('attributes', () => {
+                    $it('should set class values', () => {
+                        const topElement = document.getElementsByClassName('attribute-test')[0];
+                        const element = $findElementsByAttr(topElement, '$ref', 'attribute-test')[0];
+                        const instance = $mount(element);
+
+                        const markedElementList = topElement.getElementsByClassName('marked');
+                        $expect(markedElementList.length).toEqual(2);
+                        $expect(markedElementList[0].textContent.trim()).toEqual('this should be bolder and red');
+                        $expect(markedElementList[1].textContent.trim()).toEqual('this should be red too');
+                        topElement.classList.add('hide');
+                    });
+                });
+            });
+        </script>
     </div>
-    <div class="test">
+
+    <div class="text-test">
         <h2>text interpolation</h2>
-        <text-test></text-test>
+        <text-test $ref="componentElement"></text-test>
+        <script>
+            $component({
+                name: 'text-test',
+                data: { color: 'chartruesse'}
+            });
+        </script>
+        <template id="text-test">
+            <div>
+                <div>{{ 'do you see what I see' }}</div>
+                <div>my favorite color is {{ color }}</div>
+            </div>
+        </template>
+        <script>
+            $testInjector(({$describe, $it, $expect, $beforeAll, $afterAll}) => {
+                $describe('interpolation', () => {
+                    let topElement;
+                    let element;
+                    let instance;
+                    $beforeAll(() => {
+                        topElement = document.getElementsByClassName('text-test')[0];
+                        element = $findElementsByAttr(topElement, '$ref', 'componentElement')[0];
+                        instance = $mount(element);
+                    })
+                    $afterAll(({errorCount}) => {
+                        if (errorCount === 0) {
+                            topElement.classList.add('hide');
+                        }
+                    })
+                    $it('should set entire string', () => {
+                        const entireStringElement = element.children[0].children[0];
+                        $expect(entireStringElement.textContent.trim()).toEqual('do you see what I see');
+                    })
+                    $it('should set entire string', () => {
+                        const entireStringElement = element.children[0].children[1];
+                        $expect(entireStringElement.textContent.trim()).toEqual('my favorite color is chartruesse');
+                    })
+                })
+            })
+        </script>
     </div>
+
     <div class="test">
         <h2>data test</h2>
         <data-test $data="{colorBlue: 'blue'}"></data-test>
@@ -64,42 +162,6 @@
     </div>
 </body>
 
-<script class="template-test">
-    $component({
-        name: 'template-test'
-    })
-</script>
-<template id="template-test">
-    <div>
-        Just see this
-    </div>
-</template>
-
-<!-- /* intentionally template followed by script to test both orders work */ -->
-<template id="attribute-test">
-    <div>
-        <div $attr:class="'marked'">this should be bolder and red</div>
-        <div>compared to this</div>
-        <div $attr:class="colorRed === 'red' ? 'marked': ''">this should be red too</div>
-    </div>
-</template>
-<script class="attribute-test">
-    $component({
-        name: 'attribute-test'
-    })
-</script>
-
-<script class="test-test">
-    $component({
-        name: 'text-test',
-    })
-</script>
-<template id="text-test">
-    <div>
-        <div>{{ 'do you see what I see' }}</div>
-        <div>my favorite color is {{ colorRed }}</div>
-    </div>
-</template>
 
 <script class="data-test">
     /* note template expects colorBlue to be defined in component tag */
@@ -204,14 +266,22 @@
                 $refreshByRef('count')
             },
         },
-        verify($it, $expect, $findElementsByAttr, $instanceRoot, $flush) {
+        /* TODO
+         * test harness should be used here.
+         * and refresh behavior should be here too
+         */
+        unitTest($it, $expect, $findElementsByAttr, $flush, $thisComponent) {
+            const component = $thisComponent;
             $it('increments when clicked', async () => {
-                const button = $findElementsByAttr($instanceRoot, '$ref', 'click-increment')[0]
+                const { $elementRoot } = $testHarness($mount({
+                    component,
+                }));
+                const button = $findElementsByAttr($elementRoot, '$ref', 'click-increment')[0]
                 button.click()
                 button.click()
                 button.click()
                 await $flush()
-                const count = $findElementsByAttr($instanceRoot, '$ref', 'count')[0]
+                const count = $findElementsByAttr($elementRoot, '$ref', 'count')[0]
                 $expect(count.textContent.trim()).toEqual('4')
             })
         }
@@ -251,29 +321,17 @@
 
     const start = async () => {
         let newStatus = 'success'
-        const data = {
-            colorRed: 'red',
-        };
-        const tests = document.getElementsByClassName('test')
-        // $mount(tests[6], data)
-        // return
 
         // mount our status component to give viewer warm fuzzies
         const testStatusComponent = document.getElementsByTagName('test-status')[0];
         const testStatusInstance = $mount(testStatusComponent, state);
 
-        for (let test of tests) {
-            const component = test.children[1]
-            const { verify, name, refresh } = $testHarness($mount(component, data));
-            // const results = await Promise.allSettled([verify('run 1'), refresh(), verify('run 2')])
-            const results = await Promise.allSettled([verify('run 1'), Promise.resolve(), Promise.resolve({errorCount: 0})]);
-            if (results[0].value.errorCount !== 0 || results[2].value.errorCount !== 0) {
-                newStatus = 'failure';
-            }
-            if (results[0].value.errorCount === 0 && results[2].value.errorCount === 0) {
-                test.classList.add('hide');
-            }
+        const testRunner = $testRunner();
+        const { errorCount } = testRunner.run();
+        if (errorCount) {
+            newStatus = 'failure';
         }
+
         testStatusInstance.instance.data.status = newStatus;
         testStatusInstance.refresh();
     }

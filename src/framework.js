@@ -1,4 +1,4 @@
-const { $component, $attributeDirective, $mount, $testHarness } = (function() {
+const keywords = (function() {
     /* finds index of two consecutive characters in string, i.e. `{{` */
     const indexOf2 = (haystack, needle, pos = 0) => {
         while (true) {
@@ -41,7 +41,7 @@ const { $component, $attributeDirective, $mount, $testHarness } = (function() {
     };
 
     const $component = (definition = {}) => {
-        const {name, templateId, initializer, data} = definition;
+        const {name, templateId, initializer} = definition;
         if (! name) { throw new Error('Component definition must define a name'); };
         if (! templateId) {
             definition.templateId = name;
@@ -169,7 +169,6 @@ const { $component, $attributeDirective, $mount, $testHarness } = (function() {
     };
 
     const processNodeGeneratingDirectives = (instance, newNodes, templateNode, templateNodeChildren) => {
-        const { data } = instance;
         for (attribute of templateNode.attributes) {
             for (atrributeDirective of attributeNodeGeneratingDirectives) {
                 if (atrributeDirective.test(attribute)) {
@@ -186,7 +185,6 @@ const { $component, $attributeDirective, $mount, $testHarness } = (function() {
     };
 
     const processRegularDirectives = (instance, directives, newNodes, templateNode, templateNodeChildren) => {
-        const { data } = instance;
         let processChildren = true;
         for (attribute of templateNode.attributes) {
             for (atrributeDirective of directives) {
@@ -205,7 +203,6 @@ const { $component, $attributeDirective, $mount, $testHarness } = (function() {
     };
 
     const processTemplateElement = (instance, templateNode) => {
-        const { data } = instance;
         if (templateNode.nodeName === '#text') {
             const newNode = templateNode.cloneNode();
             // newNode.setAttribute('$templateNodeId', newNode.id)
@@ -217,7 +214,7 @@ const { $component, $attributeDirective, $mount, $testHarness } = (function() {
 
 
         let processChildren = true;
-        let newNodes = [];
+        const newNodes = [];
 
         /* first execute directives that are capable of generating multiple nodes, $for is the only one at the moment */
         processChildren &&= processNodeGeneratingDirectives(instance, newNodes, templateNode, templateNodeChildren);
@@ -279,51 +276,6 @@ const { $component, $attributeDirective, $mount, $testHarness } = (function() {
         return { instance, element, templateNode };
     };
 
-    const testHarness = (element, refresh) => {
-        const $flush = flush;
-        const $findElementsByAttr = findElementsByAttr;
-        const $instanceRoot = element;
-        const component = components[element.localName];
-        const name = component.name;
-        const tests = [];
-        const $it = async (description, test) => {
-            tests.push({description, test});
-        };
-        const $$it = (prefix) => (description, test) => $it(`${prefix}:${description}`, test);
-        const $expect = (value) => {
-            const check = (test, message) => {
-                if (! test) {
-                    throw new Error(message);
-                }
-            };
-            const toEqual = (val) => check(val === value, `${value} does not equal ${val}`);
-            const expectation = {
-                toEqual
-            };
-            return expectation;
-        };
-        const $_run = async () => {
-            const errors = [];
-            for(__test of tests) {
-                try {
-                    await __test.test();
-                } catch (e) {
-                    console.warn('test failure:', __test.description, e);
-                    errors.push(e);
-                }
-            }
-            const errorCount = errors.length;
-            return { errorCount };
-        };
-        verify = component.verify ?
-            ((prefix) => {
-                component.verify($$it(prefix), $expect, $findElementsByAttr, $instanceRoot, $flush);
-                return $_run();
-            }) : () => Promise.resolve({ errorCount: 0});
-
-        return { name, verify, refresh };
-    };
-
     /* mounts an app */
     const $mount = (element, parentData) => {
         if (!element) {
@@ -352,17 +304,156 @@ const { $component, $attributeDirective, $mount, $testHarness } = (function() {
         return { instance, element, refresh };
     };
 
-    const $testHarness = ({element, refresh}) => {
-        return testHarness(element, refresh);
+    const testNameStack = [];
+
+    /* the testDescribeStack is used to maintain lists of parent before* after* definitions
+     * the testDesribeList contains the actual tests to run, if there are any */
+    const testDescribeStack = [{
+        testList: [],
+        beforeAllList: [],
+        afterAllList:[],
+        beforeEachList: [],
+        afterEachList:[],
+    }];
+    const testDescribeList = [];
+
+    const $testInjector = (callback) => {
+        const $describe = (description, testCallback) => {
+            const parentDescribe = testDescribeStack[0];
+            testDescribeStack.unshift({
+                testList: [],
+                beforeAllList: [...parentDescribe.beforeAllList],
+                afterAllList:[...parentDescribe.afterAllList],
+                beforeEachList:[...parentDescribe.beforeEachList],
+                afterEachList:[...parentDescribe.afterEachList],
+            });
+            testNameStack.push(description);
+            testCallback(); // will setup more describes and its
+            testNameStack.pop();
+            const tests = testDescribeStack.shift();
+            if (tests.testList.length) {
+                testDescribeList.push(tests);
+            }
+        };
+
+        const $it = async (description, test) => {
+            testNameStack.push(description);
+            const fullDescription = testNameStack.join(' ');
+            const testDefinition = {description: fullDescription, run: test};
+            testDescribeStack[0].testList.push(testDefinition);
+            testNameStack.pop();
+        };
+
+        const $expect = (value) => {
+            const check = (test, message) => {
+                if (! test) {
+                    throw new Error(message);
+                }
+            };
+            const toEqual = (val) => check(val === value, `${JSON.stringify(value)} does not equal ${JSON.stringify(val)}`);
+            const expectation = {
+                toEqual
+            };
+            return expectation;
+        };
+
+        const metaBeforeOrAfter = (callbackName) => (callback) => {
+            testNameStack.push(`$${callbackName}`);
+            const runlet = {description: testNameStack.join(' '), run: callback };
+            testDescribeStack[0][callbackName].push(runlet);
+            testNameStack.pop(`$${callbackName}`);
+        };
+
+        const $beforeAll = metaBeforeOrAfter('beforeAllList');
+        const $beforeEach = metaBeforeOrAfter('beforeEachList');
+        const $afterAll = metaBeforeOrAfter('afterAllList');
+        const $afterEach = metaBeforeOrAfter('afterEachList');
+
+        const $flush = flush;
+        callback({$describe, $it, $expect, $flush, $beforeAll, $beforeEach, $afterAll, $afterEach});
     };
 
+    const $testRunner = () => {
+        const run = async () => {
+            const runCallbacks = async (callbackList, callbackForm) => {
+                const errorList = [];
+                for(const callback of callbackList) {
+                    try {
+                        await callbackForm(callback.run);
+                    } catch (e) {
+                        console.warn(`test failure: ${callback.description} ${e}`);
+                        errorList.push(e);
+                        break;
+                    }
+                }
+                return errorList;
+            };
+
+            const errorList = [];
+            for (const testDescribe of testDescribeList) {
+                const describeErrorList = [];
+                const beforeAllErrors = runCallbacks(testDescribe.beforeAllList, (r) => r());
+                if (beforeAllErrors.errorCount) {
+                    describeErrorList.push(...beforeAllErrors);
+                    break;
+                }
+                for(__test of testDescribe.testList) {
+                    const beforeEachErrors = runCallbacks(testDescribe.beforeEachList, (r) => r());
+                    if (beforeEachErrors.errorCount) {
+                        describeErrorList.push(...beforeEachErrors);
+                        break;
+                    }
+                    try {
+                        await __test.run();
+                    } catch (e) {
+                        console.warn(`test failure: ${__test.description} ${e}`);
+                        describeErrorList.push(e);
+                    }
+                    const afterEachErrors = runCallbacks(testDescribe.afterEachList, (r) => r());
+                    if (afterEachErrors.errorCount) {
+                        describeErrorList.push(...afterEachErrors);
+                        break;
+                    }
+                }
+                const errorCount = describeErrorList.length;
+                errorList.push(...describeErrorList);
+                runCallbacks(testDescribe.afterAllList, (r) => r({errorCount}));
+            }
+
+            const errorCount = errorList.length;
+            return { errorCount, errorList };
+        };
+
+        return {run};
+    };
+
+    const $findElementsByAttr = findElementsByAttr;
+
+    /* these keywords end up in global namespace */
     return {
         $component,
         $attributeDirective,
         $mount,
-        $testHarness,
+        $findElementsByAttr,
+        $testInjector,
+        $testRunner,
     };
 })();
+
+/* so many eslint-disable because ... we are injecting this into global scope, probably a better way to do this TODO */
+const {
+    // eslint-disable-next-line no-unused-vars
+    $component,
+    $attributeDirective,
+    // eslint-disable-next-line no-unused-vars
+    $mount,
+    // eslint-disable-next-line no-unused-vars
+    $findElementsByAttr,
+    // eslint-disable-next-line no-unused-vars
+    $testInjector,
+    // eslint-disable-next-line no-unused-vars
+    $testRunner,
+} = keywords;
 
 /*
  * Built-in directives
@@ -395,7 +486,6 @@ $attributeDirective({
 $attributeDirective({
     test: (attribute) => attribute.name.startsWith('$event:'),
     processor: ($, instance, node, childNodes, newNode, attribute) => {
-        const { data } = instance;
         const eventName = attribute.name.substr('$event:'.length);
         const handler = () => { $.evaluate(instance, attribute.value); };
         newNode.addEventListener(eventName, handler);
