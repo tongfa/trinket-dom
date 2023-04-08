@@ -106,10 +106,23 @@ const keywords = (function() {
     const prepareEvaluate = (instance, extraContext) => {
         const keys = [];
         const values = [];
-        for (datumKey in instance.data) {
+        for (const datumKey in instance.data) {
             keys.push(datumKey);
             const value = instance.data[datumKey];
             values.push( typeof value === 'function' ? value.bind(instance.data) : value);
+        }
+
+        if (instance.component.parameters) {
+            for (const datumKey of instance.component.parameters) {
+                if (keys.indexOf(datumKey) > -1) {
+                    // ignore keys already populated by data.
+                    continue;
+                }
+                const attribute = instance.element.attributes[datumKey];
+                const value = attribute === undefined ? undefined : attribute.value;
+                keys.push(datumKey);
+                values.push(value);
+            }
         }
 
         for (datumKey in extraContext) {
@@ -168,6 +181,7 @@ const keywords = (function() {
         return newNode;
     };
 
+    /* return value - whether to process children */
     const processNodeGeneratingDirectives = (instance, newNodes, templateNode, templateNodeChildren) => {
         for (attribute of templateNode.attributes) {
             for (atrributeDirective of attributeNodeGeneratingDirectives) {
@@ -184,6 +198,7 @@ const keywords = (function() {
         return true;
     };
 
+    /* return value - whether to process children */
     const processRegularDirectives = (instance, directives, newNodes, templateNode, templateNodeChildren) => {
         let processChildren = true;
         for (attribute of templateNode.attributes) {
@@ -203,6 +218,9 @@ const keywords = (function() {
     };
 
     const processTemplateElement = (instance, templateNode) => {
+        if (templateNode.nodeName === '#comment') {
+            return [];
+        }
         if (templateNode.nodeName === '#text') {
             const newNode = templateNode.cloneNode();
             // newNode.setAttribute('$templateNodeId', newNode.id)
@@ -281,7 +299,10 @@ const keywords = (function() {
         if (!element) {
             throw new Error('mounting invalid element');
         }
-        const preliminaryInstance = {data: parentData};
+        const component = components[element.localName];
+        if (! component) { throw new Error(`Undefined component: ${element.localName}`); }
+
+        const preliminaryInstance = {data: parentData, component, element};
         processRegularDirectives(preliminaryInstance, attributeAppEntryDirectives, [element], element, []);  // potentially adds stuff to preliminaryInstance.data
         const { instance, templateNode } = mount(preliminaryInstance, element);
 
@@ -315,10 +336,13 @@ const keywords = (function() {
         beforeEachList: [],
         afterEachList:[],
     }];
-    const testDescribeList = [];
+    const testDescriptions = {
+        list: [],
+        onlyList: [],
+    };
 
     const $testInjector = (callback) => {
-        const $describe = (description, testCallback) => {
+        const describe = (targetList) => (description, testCallback) => {
             const parentDescribe = testDescribeStack[0];
             testDescribeStack.unshift({
                 testList: [],
@@ -332,9 +356,13 @@ const keywords = (function() {
             testNameStack.pop();
             const tests = testDescribeStack.shift();
             if (tests.testList.length) {
-                testDescribeList.push(tests);
+                targetList.push(tests);
             }
         };
+
+        const $describe = describe(testDescriptions.list);
+        $describe.only = describe(testDescriptions.onlyList);
+        $describe.disable = () => {};
 
         const $it = async (description, test) => {
             testNameStack.push(description);
@@ -343,6 +371,8 @@ const keywords = (function() {
             testDescribeStack[0].testList.push(testDefinition);
             testNameStack.pop();
         };
+
+        $it.disable = () => {};
 
         const $expect = (value) => {
             const check = (test, message) => {
@@ -390,7 +420,9 @@ const keywords = (function() {
             };
 
             const errorList = [];
-            for (const testDescribe of testDescribeList) {
+            const descriptionList = testDescriptions.onlyList.length ? testDescriptions.onlyList : testDescriptions.list;
+
+            for (const testDescribe of descriptionList) {
                 const describeErrorList = [];
                 const beforeAllErrors = runCallbacks(testDescribe.beforeAllList, (r) => r());
                 if (beforeAllErrors.errorCount) {
@@ -461,6 +493,7 @@ const {
  */
 
 $attributeDirective({
+    options: { appEntry: true },
     test: (attribute) => attribute.name.startsWith('$attr:'),
     processor: ($, instance, node, childNodes, newNode, attribute) => {
         const attrKey = attribute.name.substr('$attr:'.length);

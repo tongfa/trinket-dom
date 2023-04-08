@@ -32,7 +32,7 @@
     <script class="test-status">
         $component({
             name: 'test-status',
-            props: ['testStatus']
+            parameters: ['status'],
         })
     </script>
     <template id="test-status">
@@ -458,6 +458,52 @@
                         await $flush()
                         const count = $findElementsByAttr(element, '$ref', 'count')[0]
                         $expect(count.textContent.trim()).toEqual('4')
+                    })
+                })
+            })
+        </script>
+    </div>
+
+    <div class="attribute-parameter-test">
+        <h2>prop value</h2>
+        <attribute-parameter-test simpleAttribute="car" $attr:expressionAttribute="'truck'"></attribute-parameter-test>
+        <script>
+            $component({
+                name: 'attribute-parameter-test',
+                parameters: ['simpleAttribute', 'expressionAttribute'],
+            });
+        </script>
+        <template id="attribute-parameter-test">
+            <div $ref="theCar">
+                {{ simpleAttribute }}
+            </div>
+            <div $ref="theTruck">
+                {{ expressionAttribute }}
+            </div>
+        </template>
+        <script>
+            $testInjector(({$describe, $it, $expect, $beforeAll, $afterAll, $flush}) => {
+                $describe('attribute parameter', () => {
+                    let topElement;
+                    let element;
+                    let instance;
+                    $beforeAll(() => {
+                        topElement = document.getElementsByClassName('attribute-parameter-test')[0];
+                        element = topElement.getElementsByTagName('attribute-parameter-test')[0];
+                        instance = $mount(element);
+                    })
+                    $afterAll(({errorCount}) => {
+                        if (errorCount === 0) {
+                            topElement.classList.add('hide');
+                        }
+                    })
+                    $it('passes a simple attribute', async () => {
+                        const div = $findElementsByAttr(element, '$ref', 'theCar')[0]
+                        $expect(div.textContent.trim()).toEqual('car')
+                    })
+                    $it('passes an expression attribute', async () => {
+                        const div = $findElementsByAttr(element, '$ref', 'theTruck')[0]
+                        $expect(div.textContent.trim()).toEqual('truck')
                     })
                 })
             })
